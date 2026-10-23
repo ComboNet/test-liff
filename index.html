@@ -1,65 +1,60 @@
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My First LINE LIFF</title>
-    <!-- 1. นำเข้า LINE LIFF SDK -->
-<script src="https://line-scdn.net"></script>
-
+    <title>LINE LIFF Test</title>
+    <!-- ใช้ SDK เวอร์ชันคงที่เพื่อความปลอดภัย -->
+    <script src="https://line-scdn.net"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f4f4f4; }
-        .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn:hover { background-color: #05b04b; }
-        #status { margin-top: 20px; color: #666; }
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <h1>LINE LIFF Demo</h1>
-    <!-- ปุ่มกดสำหรับแสดง Popup User ID -->
     <button class="btn" id="btnShowId">แสดง LINE User ID</button>
-    <p id="status">กำลังโหลด LIFF...</p>
+    <p id="status">กำลังตรวจสอบ SDK...</p>
 
     <script>
-        // ใส่ LIFF ID ที่ได้จาก LINE Developers Console หลังจากทำขั้นตอนที่ 3
+        // เปลี่ยนตรงนี้เป็น LIFF ID ของคุณที่ได้มาจาก LINE Developers
         const MY_LIFF_ID = '2011670896-I1d2k696'; 
 
-        // ฟังก์ชันเริ่มต้นทำงานเมื่อเปิดหน้าเว็บ
-        async function main() {
-            try {
-                // 2. สั่งให้ LIFF ทำงาน
-                await liff.init({ liffId: MY_LIFF_ID });
-                document.getElementById('status').innerText = "LIFF พร้อมใช้งานแล้ว";
-
-                // ตรวจสอบว่าผู้ใช้ล็อกอินหรือยัง ถ้ายังให้สั่งล็อกอิน
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                } else {
-                    // เปิดใช้งานปุ่มกด
-                    document.getElementById('btnShowId').addEventListener('click', showUserId);
-                }
-            } catch (error) {
-                document.getElementById('status').innerText = "เกิดข้อผิดพลาดในการโหลด LIFF: " + error;
+        function initLiffApp() {
+            // ตรวจสอบขั้นสูงสุดว่าตรวจพบตัวแปร liff ในระบบหรือไม่
+            if (typeof liff === 'undefined') {
+                document.getElementById('status').innerText = "ข้อผิดพลาด: ไม่สามารถโหลดไฟล์ SDK จาก LINE ได้ (กรุณาเช็กอินเทอร์เน็ต หรือห้ามเปิดไฟล์นี้ตรงๆ)";
+                return;
             }
+
+            liff.init({ liffId: MY_LIFF_ID })
+                .then(() => {
+                    document.getElementById('status').innerText = "LIFF พร้อมใช้งานแล้ว!";
+                    if (!liff.isLoggedIn()) {
+                        liff.login();
+                    } else {
+                        document.getElementById('btnShowId').addEventListener('click', showUserId);
+                    }
+                })
+                .catch((err) => {
+                    document.getElementById('status').innerText = "LIFF Init ไม่ผ่าน: " + err;
+                });
         }
 
-        // ฟังก์ชันดึง User ID และแสดง Popup
-        async function showUserId() {
-            try {
-                // 3. ดึงข้อมูล Profile ของผู้ใช้
-                const profile = await liff.getProfile();
-                const userId = profile.userId; // นี่คือพารามิเตอร์ LINE User ID
-
-                // แสดงผลลัพธ์เป็น Popup Dialog (alert)
-                alert("LINE User ID ของคุณคือ:\n" + userId);
-            } catch (error) {
-                alert("ไม่สามารถดึงข้อมูล User ID ได้: " + error);
-            }
+        function showUserId() {
+            liff.getProfile()
+                .then(profile => {
+                    alert("LINE User ID ของคุณคือ:\n" + profile.userId);
+                })
+                .catch(err => {
+                    alert("ดึง Profile ล้มเหลว: " + err);
+                });
         }
 
-        // เริ่มต้นรันฟังก์ชันหลัก
-        main();
+        // สั่งให้ทำงานเมื่อหน้าจอโหลดเสร็จเรียบร้อย
+        window.onload = initLiffApp;
     </script>
 </body>
 </html>
