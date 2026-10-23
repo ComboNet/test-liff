@@ -1,60 +1,109 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINE LIFF Test</title>
-    <!-- ใช้ SDK เวอร์ชันคงที่เพื่อความปลอดภัย -->
-    <script src="https://line-scdn.net"></script>
+    <title>ระบบ LINE LIFF เบื้องต้น</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
-        .btn { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 5px; cursor: pointer; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f0f0f0; }
+        .profile-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block; margin-top: 20px; }
+        #pictureUrl { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #06C755; }
+        button { background-color: #06C755; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; }
+        button:hover { background-color: #05b04b; }
     </style>
 </head>
 <body>
 
-    <h1>LINE LIFF Demo</h1>
-    <button class="btn" id="btnShowId">แสดง LINE User ID</button>
-    <p id="status">กำลังตรวจสอบ SDK...</p>
+    <h1>ยินดีต้อนรับสู่ LINE LIFF App</h1>
+    
+    <div id="loading">กำลังโหลดข้อมูล...</div>
 
+    <!-- ส่วนแสดงข้อมูลโปรไฟล์หลังจาก Login สำเร็จ -->
+    <div id="profile-zone" class="profile-card" style="display: none;">
+        <img id="pictureUrl" src="" alt="Profile Picture"><br><br>
+        <p><strong>User ID:</strong> <span id="userId"></span></p>
+        <p><strong>ชื่อ:</strong> <span id="displayName"></span></p>
+        <p><strong>สถานะ:</strong> <span id="statusMessage"></span></p>
+        
+        <button onclick="sendFlexMessage()">ส่งข้อความเข้าแชท</button>
+        <button onclick="closeLiff()">ปิดหน้าต่าง</button>
+    </div>
+
+    <!-- โหลด LINE LIFF SDK -->
+    <script src="https://line-scdn.net"></script>
     <script>
-        // เปลี่ยนตรงนี้เป็น LIFF ID ของคุณที่ได้มาจาก LINE Developers
+        // เปลี่ยนตรงนี้เป็น LIFF ID ของคุณที่ได้จาก LINE Developers Console
         const MY_LIFF_ID = '2011670896-I1d2k696'; 
 
-        function initLiffApp() {
-            // ตรวจสอบขั้นสูงสุดว่าตรวจพบตัวแปร liff ในระบบหรือไม่
-            if (typeof liff === 'undefined') {
-                document.getElementById('status').innerText = "ข้อผิดพลาด: ไม่สามารถโหลดไฟล์ SDK จาก LINE ได้ (กรุณาเช็กอินเทอร์เน็ต หรือห้ามเปิดไฟล์นี้ตรงๆ)";
+        async function initLIFF() {
+            try {
+                // 1. เริ่มต้นระบบ LIFF
+                await liff.init({ liffId: MY_LIFF_ID });
+
+                // 2. ตรวจสอบว่าผู้ใช้ Login หรือยัง
+                if (!liff.isLoggedIn()) {
+                    // ถ้าเปิดบน Browser ทั่วไปและยังไม่ได้ Login ให้เด้งไปหน้า Login ของ LINE
+                    liff.login();
+                } else {
+                    // ถ้า Login แล้ว ให้ไปดึงข้อมูลโปรไฟล์มาแสดง
+                    getUserProfile();
+                }
+            } catch (error) {
+                console.error('LIFF Initialization failed', error);
+                document.getElementById('loading').innerText = 'เกิดข้อผิดพลาดในการโหลด LIFF';
+            }
+        }
+
+        async function getUserProfile() {
+            try {
+                // ดึงข้อมูลโปรไฟล์ผู้ใช้
+                const profile = await liff.getProfile();
+                
+                // นำข้อมูลไปแสดงบนหน้าเว็บ
+                document.getElementById('userId').innerText = profile.userId;
+                document.getElementById('displayName').innerText = profile.displayName;
+                document.getElementById('statusMessage').innerText = profile.statusMessage || '-';
+                document.getElementById('pictureUrl').src = profile.pictureUrl;
+
+                // ซ่อนข้อความกำลังโหลด แล้วแสดงการ์ดโปรไฟล์
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('profile-zone').style.display = 'block';
+            } catch (error) {
+                console.error('Error getting profile', error);
+            }
+        }
+
+        // ฟังก์ชันสั่งให้ส่งข้อความแชทกลับในนามของผู้ใช้เอง
+        async function sendFlexMessage() {
+            // เช็คว่าเปิดฟีเจอร์นี้ในแชทของ LINE หรือไม่ (เปิดบน Browser นอกจะใช้ฟังก์ชันนี้ไม่ได้)
+            if (!liff.isInClient()) {
+                alert('ฟังก์ชันการส่งข้อความนี้ ทำงานได้เฉพาะเมื่อเปิดในแอป LINE เท่านั้น');
                 return;
             }
 
-            liff.init({ liffId: MY_LIFF_ID })
-                .then(() => {
-                    document.getElementById('status').innerText = "LIFF พร้อมใช้งานแล้ว!";
-                    if (!liff.isLoggedIn()) {
-                        liff.login();
-                    } else {
-                        document.getElementById('btnShowId').addEventListener('click', showUserId);
+            try {
+                await liff.sendMessages([
+                    {
+                        type: 'text',
+                        text: 'สวัสดี! ฉันกำลังทดสอบระบบ LINE LIFF อยู่ล่ะ 🎉'
                     }
-                })
-                .catch((err) => {
-                    document.getElementById('status').innerText = "LIFF Init ไม่ผ่าน: " + err;
-                });
+                ]);
+                alert('ส่งข้อความสำเร็จแล้ว!');
+            } catch (error) {
+                console.error('Error sending message', error);
+                alert('ส่งข้อความล้มเหลว: ' + error.message);
+            }
         }
 
-        function showUserId() {
-            liff.getProfile()
-                .then(profile => {
-                    alert("LINE User ID ของคุณคือ:\n" + profile.userId);
-                })
-                .catch(err => {
-                    alert("ดึง Profile ล้มเหลว: " + err);
-                });
+        // ฟังก์ชันสั่งปิดหน้าต่าง LIFF
+        function closeLiff() {
+            liff.closeWindow();
         }
 
-        // สั่งให้ทำงานเมื่อหน้าจอโหลดเสร็จเรียบร้อย
-        window.onload = initLiffApp;
+        // สั่งให้ฟังก์ชันเริ่มต้นทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        window.onload = function() {
+            initLIFF();
+        };
     </script>
 </body>
 </html>
