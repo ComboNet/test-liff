@@ -26,12 +26,12 @@
         <p><strong>ชื่อ:</strong> <span id="displayName"></span></p>
         <p><strong>สถานะ:</strong> <span id="statusMessage"></span></p>
         
+        <!-- เพิ่มปุ่มสแกน QR Code ตรงนี้ -->
+        <button onclick="scanQRCode()">สแกน QR Code</button>
         <button onclick="sendFlexMessage()">ส่งข้อความเข้าแชท</button>
         <button onclick="closeLiff()">ปิดหน้าต่าง</button>
     </div>
 
-    <!-- โหลด LINE LIFF SDK -->
-    <script src="https://line-scdn.net"></script>
     <script>
         // เปลี่ยนตรงนี้เป็น LIFF ID ของคุณที่ได้จาก LINE Developers Console
         const MY_LIFF_ID = '2011670896-I1d2k696'; 
@@ -41,67 +41,54 @@
                 // 1. เริ่มต้นระบบ LIFF
                 await liff.init({ liffId: MY_LIFF_ID });
 
-                // 2. ตรวจสอบว่าผู้ใช้ Login หรือยัง
+                // 2. ตรวจสอบการ Login
                 if (!liff.isLoggedIn()) {
-                    // ถ้าเปิดบน Browser ทั่วไปและยังไม่ได้ Login ให้เด้งไปหน้า Login ของ LINE
                     liff.login();
                 } else {
-                    // ถ้า Login แล้ว ให้ไปดึงข้อมูลโปรไฟล์มาแสดง
-                    getUserProfile();
+                    // ซ่อนข้อความกำลังโหลด และแสดงโปรไฟล์
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('profile-zone').style.display = 'inline-block';
+                    
+                    // ดึงข้อมูลโปรไฟล์มาแสดงผล
+                    const profile = await liff.getProfile();
+                    document.getElementById('userId').innerText = profile.userId;
+                    document.getElementById('displayName').innerText = profile.displayName;
+                    document.getElementById('statusMessage').innerText = profile.statusMessage || '-';
+                    document.getElementById('pictureUrl').src = profile.pictureUrl;
                 }
             } catch (error) {
                 console.error('LIFF Initialization failed', error);
-                document.getElementById('loading').innerText = 'เกิดข้อผิดพลาดในการโหลด LIFF';
+                document.getElementById('loading').innerText = 'เกิดข้อผิดพลาดในการโหลดระบบ';
             }
         }
 
-        async function getUserProfile() {
-            try {
-                // ดึงข้อมูลโปรไฟล์ผู้ใช้
-                const profile = await liff.getProfile();
-                
-                // นำข้อมูลไปแสดงบนหน้าเว็บ
-                document.getElementById('userId').innerText = profile.userId;
-                document.getElementById('displayName').innerText = profile.displayName;
-                document.getElementById('statusMessage').innerText = profile.statusMessage || '-';
-                document.getElementById('pictureUrl').src = profile.pictureUrl;
-
-                // ซ่อนข้อความกำลังโหลด แล้วแสดงการ์ดโปรไฟล์
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('profile-zone').style.display = 'block';
-            } catch (error) {
-                console.error('Error getting profile', error);
+        // ฟังก์ชันสแกน QR Code
+        async function scanQRCode() {
+            // ตรวจสอบว่าเปิดทำงานบนอุปกรณ์ที่รองรับ liff.scanCodeV2 หรือไม่ (ทำงานใน LINE App เท่านั้น)
+            if (liff.isApiAvailable('scanCodeV2')) {
+                try {
+                    const result = await liff.scanCodeV2();
+                    alert('ผลการสแกน: ' + result.value);
+                    // สามารถนำค่า result.value ไปใช้งานต่อ เช่น redirect หรือส่งเข้า API ได้ที่นี่
+                } catch (error) {
+                    console.error('Scan QR Code error:', error);
+                    alert('ยกเลิกการสแกน หรือเกิดข้อผิดพลาด');
+                }
+            } else {
+                alert('ฟังก์ชันสแกน QR Code รองรับการทำงานภายในแอปพลิเคชัน LINE เท่านั้น');
             }
         }
 
-        // ฟังก์ชันสั่งให้ส่งข้อความแชทกลับในนามของผู้ใช้เอง
-        async function sendFlexMessage() {
-            // เช็คว่าเปิดฟีเจอร์นี้ในแชทของ LINE หรือไม่ (เปิดบน Browser นอกจะใช้ฟังก์ชันนี้ไม่ได้)
-            if (!liff.isInClient()) {
-                alert('ฟังก์ชันการส่งข้อความนี้ ทำงานได้เฉพาะเมื่อเปิดในแอป LINE เท่านั้น');
-                return;
-            }
-
-            try {
-                await liff.sendMessages([
-                    {
-                        type: 'text',
-                        text: 'สวัสดี! ฉันกำลังทดสอบระบบ LINE LIFF อยู่ล่ะ 🎉'
-                    }
-                ]);
-                alert('ส่งข้อความสำเร็จแล้ว!');
-            } catch (error) {
-                console.error('Error sending message', error);
-                alert('ส่งข้อความล้มเหลว: ' + error.message);
-            }
-        }
-
-        // ฟังก์ชันสั่งปิดหน้าต่าง LIFF
         function closeLiff() {
             liff.closeWindow();
         }
 
-        // สั่งให้ฟังก์ชันเริ่มต้นทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        function sendFlexMessage() {
+            // โค้ดสำหรับส่ง Flex Message ของคุณ
+            alert('เรียกใช้งานฟังก์ชันส่งข้อความ');
+        }
+
+        // เรียกใช้งานตั่งแต่เปิดหน้าเว็บ
         window.onload = function() {
             initLIFF();
         };
